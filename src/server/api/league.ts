@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { config } from "../config";
-import { BadRequestError, NotFoundError } from "../lib/classes/errors";
+import { NotFoundError } from "../lib/classes/errors";
 
 export async function handlerLeague(_: Request, res: Response) {
 	const leagueId = config.league.id;
@@ -15,8 +15,10 @@ export async function handlerLeague(_: Request, res: Response) {
 			leagueId,
 			"winners_bracket"
 		),
-		leagueTransactionsWeekThree = await getLeagueTransaction(leagueId, 3),
-		nflState = await getNFLState("nfl");
+		leagueTransactionsWeekThree = await getLeagueTransactions(leagueId, 3),
+		nflState = await getNFLState("nfl"),
+		leagueDrafts = await getLeagueDraft(leagueId);
+
 	const data = {
 		league,
 		leagueRoster,
@@ -24,7 +26,8 @@ export async function handlerLeague(_: Request, res: Response) {
 		thisWeeksLeaguesMatchups,
 		leagueWinnersBracket,
 		leagueTransactionsWeekThree,
-		nflState
+		nflState,
+		leagueDrafts
 	};
 
 	res.send(data);
@@ -97,7 +100,7 @@ export async function getLeaguePlayoffBracket(
 	return await playoffBracket.json();
 }
 
-export async function getLeagueTransaction(leagueId: string, week: number) {
+export async function getLeagueTransactions(leagueId: string, week: number) {
 	const url = `https://api.sleeper.app/v1/league/${leagueId}/transactions/${week}`;
 	const leagueTransactions = await fetch(url);
 	if (!leagueTransactions)
@@ -118,4 +121,14 @@ export async function getNFLState(sport: "nfl") {
 		);
 
 	return await nflState.json();
+}
+
+export async function getLeagueDraft(leagueId: string) {
+	const url = `https://api.sleeper.app/v1/league/${leagueId}/drafts`;
+	const leagueDrafts = await fetch(url);
+
+	if (!leagueDrafts)
+		throw new NotFoundError(`No drafts found for League ID: ${leagueId}. Please make sure your League ID is correct`);
+
+	return await leagueDrafts.json();
 }
